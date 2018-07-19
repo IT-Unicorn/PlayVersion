@@ -6,7 +6,7 @@
 
 <script>
   export default {
-    name: 'playversion'
+    name: 'PlayVersion'
   }
 </script>
 

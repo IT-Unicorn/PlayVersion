@@ -17,7 +17,7 @@
     "postinstall": ""
   },
   "build": {
-    "productName": "playversion",
+    "productName": "PlayVersion",
     "appId": "org.simulatedgreg.electron-vue",
     "directories": {
       "output": "build"
@@ -51,8 +51,11 @@
     }
   },
   "dependencies": {
-    "vue": "^2.3.3",
     "axios": "^0.16.1",
+    "element-ui": "^2.4.4",
+    "nedb": "^1.8.0",
+    "vue": "^2.3.3",
+    "vue-devtools": "^4.1.4",
     "vue-electron": "^1.0.6",
     "vue-router": "^2.5.3",
     "vuex": "^2.3.1"
