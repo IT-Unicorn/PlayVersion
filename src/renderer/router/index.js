@@ -13,6 +13,10 @@ export default new Router({
       path: '/addNode',
       name: 'AddNode',
       component: require('@/components/node/AddNode').default
+    },{
+      path: '/EditNode/:id',
+      name: 'EditNode',
+      component: require('@/components/node/AddNode').default
     },
     {
       path: '*',
