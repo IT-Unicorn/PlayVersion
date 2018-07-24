@@ -7,11 +7,9 @@ import store from './store'
 import ElementUI from 'element-ui'
 Vue.use(ElementUI)
 import 'element-ui/lib/theme-chalk/index.css'
-
 if (!process.env.IS_WEB) Vue.use(require('vue-electron'))
 Vue.http = Vue.prototype.$http = axios
 Vue.config.productionTip = false
-
 /* eslint-disable no-new */
 new Vue({
   components: { App },

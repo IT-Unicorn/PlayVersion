@@ -2,20 +2,55 @@
     <el-container>
         <el-header>
              <el-button  icon="el-icon-plus"  @click="add()">添加节点</el-button>
+             <el-dropdown @command="batchHandleCommand" trigger="click">
+                <el-button>
+                    批量处理<i class="el-icon-arrow-down el-icon--right"></i>
+                </el-button>
+                <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item command = "upload">上传补丁</el-dropdown-item>
+                    <el-dropdown-item command = "start">启服务</el-dropdown-item>
+                    <el-dropdown-item command = "stop">停服务</el-dropdown-item>
+                    <el-dropdown-item command = "clear">清缓存</el-dropdown-item>
+                </el-dropdown-menu>
+                </el-dropdown>
+                <el-button  icon="el-icon-upload2"  @click="importFile()">导入1.0配置</el-button>
         </el-header>
         <el-main>
-            <el-table :data="nodelist" style="width: 100%" border stripe>
-              <el-table-column type="selection" width="55"></el-table-column>
-              <el-table-column prop="name" label="节点名称" ></el-table-column>
-              <el-table-column prop="ip" label="节点地址(IP)" ></el-table-column>
-              <el-table-column prop="port" label="端口" ></el-table-column>
-              <el-table-column prop="user" label="节点登陆用户名" ></el-table-column>
-              <el-table-column align="center" label="操作" width="150" fixed="right">
+            <el-table :data= "nodelist" 
+                style="width: 100%"
+                border 
+                ref="multipleTable"
+                @selection-change="handleSelectionChange"
+            >
+              <el-table-column type="selection" width="35" align="center"></el-table-column>
+              <el-table-column prop="group" label="分组" 
+                :filters = "nodeFilter"
+                :filter-method = "filterHandler"
+                align="center"
+              ></el-table-column>
+              <el-table-column prop="name" label="节点名称" align="center"></el-table-column>
+              <el-table-column prop="ip" label="节点地址(IP)" width="120" align="center"></el-table-column>
+              <el-table-column prop="port" label="端口" width="50" align="center"></el-table-column>
+              <el-table-column prop="user" label="用户名" align="center"></el-table-column>
+              <el-table-column align="center" width="130" fixed="right">
                 <template slot-scope="scope">
-                <el-button  size="small" type="success" @click="handleUpdate(scope.row)">编辑
+                <el-button  size="small" type="success" @click="handleUpdate(scope.row)" icon="el-icon-edit">
                 </el-button>
-                <el-button  size="small" type="danger" @click="handleDelete(scope.row)">删除
+                <el-button  size="small" type="danger" @click="handleDelete(scope.row)" icon="el-icon-delete">
                 </el-button>
+                </template>
+              </el-table-column>
+              <el-table-column align="center" width="120" fixed="right">
+                <template slot-scope="scope">
+                <el-dropdown @command="handleCommand" trigger="click">
+                <el-button type="primary" size="small">更多操作<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+                <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item :command = "{type:'upload',params:scope.row}">上传补丁</el-dropdown-item>
+                    <el-dropdown-item :command = "{type:'start',params:scope.row}">启服务</el-dropdown-item>
+                    <el-dropdown-item :command = "{type:'stop',params:scope.row}">停服务</el-dropdown-item>
+                    <el-dropdown-item :command = "{type:'clear',params:scope.row}">清缓存</el-dropdown-item>
+                </el-dropdown-menu>
+                </el-dropdown>
                 </template>
               </el-table-column>
             </el-table>
@@ -24,13 +59,24 @@
 </template>
 
 <script>
-import db from '../../../database/index'
     export default {
         name: 'Home',
         data(){
             return {
-               nodelist:[] 
+               nodelist:[],
+               loading:"",
+               multipleSelection:[]
             }
+        },
+        computed:{
+           nodeFilter:function(){
+               return this.nodelist.length > 0 ? 
+                Array.from(new Set(this.nodelist.map((value)=>{
+                        return value.group
+                    }))).map((val)=>{
+                   return {text:val,value:val}
+               }) : [{text:'',value:''}]
+           }
         },
         methods: {
             add () {
@@ -51,20 +97,119 @@ import db from '../../../database/index'
                     type: 'warning'
                 }).then(() => {
                     this.$store.dispatch('delNode',row._id).then(() => {
-                        this.$notify({
-                            title: '成功',
-                            message: '删除成功',
-                            type: 'success',
-                            duration: 2000
-                        })
+                        this.$message.success('删除成功')
                         this.getList()
                         })
                 });
+            },
+            handleCommand(command){
+                switch(command.type){
+                    case "upload":
+                        let localPath = this.$electron.remote.dialog.showOpenDialog({properties: ['openDirectory']})
+                        if(!localPath) return
+                        this.loading = this.$loading({
+                            lock: true,
+                            text: 'Loading',
+                            spinner: 'el-icon-loading',
+                            background: 'rgba(0, 0, 0, 0.7)'
+                        });
+                        this.$store.dispatch(
+                            'SSH2PutDirectory',{
+                                localPath : localPath[0],
+                                nodeinfo : command.params
+                            }   
+                        ).then(() => {
+                        this.loading.close()
+                        this.$message.success('上传成功')
+                        }).catch((err)=>{
+                        this.loading.close()   
+                        this.$message.error(err)
+                        })
+                        break
+                    default:
+                        this.loading = this.$loading({
+                            lock: true,
+                            text: 'Loading',
+                            spinner: 'el-icon-loading',
+                            background: 'rgba(0, 0, 0, 0.7)'
+                        });
+                        this.$store.dispatch('SSH2Exec',{
+                            type : command.type,
+                            nodeinfo : command.params 
+                        }).then(()=>{
+                            this.loading.close()
+                            this.$message.success('指令发送成功')
+                        }).catch((err)=>{
+                            this.loading.close()
+                            this.$message.error(err)
+                        })
+                        break
+                }
+                
+            },
+            batchHandleCommand(command){
+                if(this.multipleSelection.length == 0){
+                    this.$message.error('请选择要处理的记录')
+                    return
+                }
+                switch(command){
+                    case "upload":
+                        let localPath = this.$electron.remote.dialog.showOpenDialog({properties: ['openDirectory']})
+                        if(!localPath) return
+                        this.loading = this.$loading({
+                            lock: true,
+                            text: 'Loading',
+                            spinner: 'el-icon-loading',
+                            background: 'rgba(0, 0, 0, 0.7)'
+                        });
+                        this.$store.dispatch(
+                            'SSH2BatchPutDir',{
+                                localPath : localPath[0],
+                                nodeinfo : this.multipleSelection
+                            }   
+                        ).then(()=>{
+                            this.loading.close()
+                            this.$message.success('批量操作完成')
+                        })
+                        break
+                    default:
+                        this.loading = this.$loading({
+                            lock: true,
+                            text: 'Loading',
+                            spinner: 'el-icon-loading',
+                            background: 'rgba(0, 0, 0, 0.7)'
+                        });
+                        this.$store.dispatch(
+                            'SSH2BatchExec',{
+                                type : command,
+                                nodeinfo : this.multipleSelection
+                            }   
+                        ).then(()=>{
+                            this.loading.close()
+                            this.$message.success('批量操作完成')
+                        })
+                }
+            },
+            handleSelectionChange(val){
+                this.multipleSelection = val
+            },
+            filterHandler(value, row, column) {
+                this.$refs.multipleTable.clearSelection()
+                return row.group === value;
+            },
+            importFile(){
+                let filePath = this.$electron.remote.dialog.showOpenDialog({filters:[{name: 'Properties', extensions: ['properties']}],properties: ['openFile']})
+                if(!filePath) return
+                this.$store.dispatch('readOldConfig',filePath[0]).then(()=>{
+                    this.getList()
+                }).catch((err)=>{
+                    this.$message.error(err)
+                })
             }
-
         },
-        created() {
+        mounted() {
             this.getList()
+            // this.$electron.shell.openExternal('cmd',{activate:true})
         },
     }
 

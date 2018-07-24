@@ -1,0 +1,5 @@
+{
+    "search.exclude": {
+        "**/bower_components": true
+    }
+}

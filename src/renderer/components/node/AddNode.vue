@@ -4,6 +4,9 @@
       <el-form-item label="节点名称" prop="name">
           <el-input v-model="ruleForm.name" placeholder="请输入名称"></el-input>
       </el-form-item>
+      <el-form-item label="分组" prop="group">
+          <el-input v-model="ruleForm.group" placeholder="'分组'信息用于筛选,可以填写'正式','测试'等自定义标识"></el-input>
+      </el-form-item>
       <el-form-item label="节点地址(IP)" prop="ip">
           <el-input v-model="ruleForm.ip" placeholder="请输入节点IP地址"></el-input>
       </el-form-item>
@@ -46,6 +49,7 @@
       return {
         ruleForm: {
           name: '',
+          group:'',
           ip: '',
           port: 22,
           user: '',
@@ -60,6 +64,9 @@
           name: [
             { required: true, message: '请输入节点名称', trigger: 'blur' },
             { min: 3, max: 10, message: '长度在 3 到 10 个字符', trigger: 'blur' }
+          ],
+          gtoup: [
+            { required: true, message: '请输入分组信息', trigger: 'blur' },
           ],
           ip: [
             { required: true, validator:this.IpRules, trigger: 'blur' }
@@ -105,11 +112,11 @@
               path: '/'
             })
             }).catch(() => {
-              this.$message({message: '添加节点信息失败',type: 'warning',duration:2000})
+              this.$message.error('添加节点信息失败')
               return false
             })
           } else {
-            this.$message({message: '表单校验未通过',type: 'warning',duration:2000})
+            this.$message.error('表单校验未通过')
             return false
           }
         });
@@ -135,7 +142,7 @@
         this.$store.dispatch('getNodeById',this.nodeId).then((data)=>{
           this.ruleForm = data
         }).catch(()=>{
-          this.$message({message: '获取节点信息失败',type: 'warning',duration:2000});
+          this.$message.error('获取节点信息失败');
           return false;
         })
       }
