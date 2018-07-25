@@ -5,8 +5,21 @@ const ssh = new node_ssh()
 
 const ssh2 = {
     state: {
-        
+        logStream : ""
     },
+    mutations: {
+      readLog(state,stream){
+        state.logStream = stream 
+      },
+      clearLog(state){
+        state.logStream = "" 
+      }
+    },
+    getters: {
+        getLog: state => {
+          return state.logStream
+        }
+      },
     actions: {
         SSH2Connect({ commit },node){
             return new Promise((resolve, reject) => {
@@ -71,6 +84,38 @@ const ssh2 = {
                                 cwd:path.substr(0,path.lastIndexOf('/')),
                                 onStdout(chunk) {
                                     ssh.dispose()
+                                },
+                            }).then(()=>{
+                                resolve()
+                            })
+                        }).catch((err)=>{
+                            ssh.dispose()
+                            reject('文件未找到:'+path)
+                        })
+                    }).catch((err)=>{
+                    reject('登陆失败:'+err)
+                    })
+            })  
+        },
+        SSH2CloseLog({commit}){
+            ssh.dispose()
+            commit("clearLog")
+        },
+        SSH2ShowLog({commit},nodeinfo){
+            return new Promise((resolve, reject) => {
+                ssh.connect({
+                    host: nodeinfo.ip,
+                    username: nodeinfo.user,
+                    port: nodeinfo.port,
+                    password:nodeinfo.password
+                    }).then(()=>{
+                        let path = nodeinfo.logpath
+                        ssh.exec('find '+path,[],{
+                        }).then(()=>{
+                            ssh.exec('export LANG=zh_CN.UTF-8 ; tail -100f '+path, [], {
+                                cwd:path.substr(0,path.lastIndexOf('/')),
+                                onStdout(chunk) {
+                                    commit("readLog",chunk.toString())
                                 },
                             }).then(()=>{
                                 resolve()

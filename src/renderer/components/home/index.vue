@@ -1,9 +1,9 @@
 <template>
     <el-container>
-        <el-header>
+        <el-header height = '30px'>
              <el-button  icon="el-icon-plus"  @click="add()">添加节点</el-button>
              <el-dropdown @command="batchHandleCommand" trigger="click">
-                <el-button>
+                <el-button >
                     批量处理<i class="el-icon-arrow-down el-icon--right"></i>
                 </el-button>
                 <el-dropdown-menu slot="dropdown">
@@ -19,6 +19,7 @@
             <el-table :data= "nodelist" 
                 style="width: 100%"
                 border 
+                size = "small"
                 ref="multipleTable"
                 @selection-change="handleSelectionChange"
             >
@@ -49,13 +50,23 @@
                     <el-dropdown-item :command = "{type:'start',params:scope.row}">启服务</el-dropdown-item>
                     <el-dropdown-item :command = "{type:'stop',params:scope.row}">停服务</el-dropdown-item>
                     <el-dropdown-item :command = "{type:'clear',params:scope.row}">清缓存</el-dropdown-item>
+                    <el-dropdown-item :command = "{type:'log',params:scope.row}">查看日志</el-dropdown-item>
                 </el-dropdown-menu>
                 </el-dropdown>
                 </template>
               </el-table-column>
             </el-table>
         </el-main>
+        <el-dialog :title = "logTitle" :visible.sync="logDialogVisible" fullscreen center :before-close = "logClose">
+            <el-input
+                type="textarea"
+                rows="20"
+                resize="none"
+                v-model="this.logT">
+            </el-input>
+        </el-dialog>
     </el-container>
+    
 </template>
 
 <script>
@@ -65,7 +76,10 @@
             return {
                nodelist:[],
                loading:"",
-               multipleSelection:[]
+               multipleSelection:[],
+               logTitle:"日志",
+               logDialogVisible: false,
+               logText : ""
             }
         },
         computed:{
@@ -76,6 +90,10 @@
                     }))).map((val)=>{
                    return {text:val,value:val}
                }) : [{text:'',value:''}]
+           },
+           logT:function(){
+            //    console.log(this.$store.state.logStream)
+               return this.$store.getters.getLog
            }
         },
         methods: {
@@ -102,6 +120,10 @@
                         })
                 });
             },
+            logClose(done){
+                this.$store.dispatch('SSH2CloseLog')
+                done()
+            },
             handleCommand(command){
                 switch(command.type){
                     case "upload":
@@ -124,6 +146,13 @@
                         }).catch((err)=>{
                         this.loading.close()   
                         this.$message.error(err)
+                        })
+                        break
+                    case "log":
+                        this.logDialogVisible = true
+                        this.logTitle = command.params.name + '日志信息'
+                        this.$store.dispatch('SSH2ShowLog',command.params).catch((err)=>{
+                            this.$message.error(err)
                         })
                         break
                     default:
