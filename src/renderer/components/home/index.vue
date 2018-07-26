@@ -1,8 +1,16 @@
 <template>
     <el-container>
         <el-header height = '30px'>
-             <el-button  icon="el-icon-plus"  @click="add()">添加节点</el-button>
-             <el-dropdown @command="batchHandleCommand" trigger="click">
+             <el-dropdown @command="nodeHandleCommand" trigger="click">
+                <el-button >
+                    添加节点<i class="el-icon-arrow-down el-icon--right"></i>
+                </el-button>
+                <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item command = "add">单个添加</el-dropdown-item>
+                    <el-dropdown-item command = "import">导入1.0配置</el-dropdown-item>
+                </el-dropdown-menu>
+            </el-dropdown>
+            <el-dropdown @command="batchHandleCommand" trigger="click">
                 <el-button >
                     批量处理<i class="el-icon-arrow-down el-icon--right"></i>
                 </el-button>
@@ -12,8 +20,7 @@
                     <el-dropdown-item command = "stop">停服务</el-dropdown-item>
                     <el-dropdown-item command = "clear">清缓存</el-dropdown-item>
                 </el-dropdown-menu>
-                </el-dropdown>
-                <el-button  icon="el-icon-upload2"  @click="importFile()">导入1.0配置</el-button>
+            </el-dropdown>
         </el-header>
         <el-main>
             <el-table :data= "nodelist" 
@@ -57,13 +64,14 @@
               </el-table-column>
             </el-table>
         </el-main>
-        <el-dialog :title = "logTitle" :visible.sync="logDialogVisible" fullscreen center :before-close = "logClose">
-            <el-input
-                type="textarea"
-                rows="20"
-                resize="none"
-                v-model="this.logT">
-            </el-input>
+        <el-dialog :title = "logTitle + '(ESC退出)'" :visible.sync="logDialogVisible" fullscreen center :before-close = "logClose">
+            <div class="logAreadiv" ref = "logAreadiv">
+                <p class="logArea">{{this.logT}}</p>
+            </div>
+            <el-row type="flex" class="row-bg" justify="center">
+            <el-button @click="logDownloadBtn()">保存日志到磁盘</el-button>
+            <el-button @click="logStop()" :disabled = "logStopDis">停止读取</el-button>
+            </el-row>
         </el-dialog>
     </el-container>
     
@@ -79,8 +87,18 @@
                multipleSelection:[],
                logTitle:"日志",
                logDialogVisible: false,
-               logText : ""
+               logText : "",
+               logAreaRows : "20",
+               logStopDis:false
             }
+        },
+        watch:{
+            logT : function(val,oldval){
+                // this.$refs.tarea.$refs.textarea.scrollTop = this.$refs.tarea.$refs.textarea.scrollHeight +500
+                if(this.$refs.logAreadiv){
+                    this.$refs.logAreadiv.scrollTop = this.$refs.logAreadiv.scrollHeight + 5000
+                }
+            },
         },
         computed:{
            nodeFilter:function(){
@@ -92,13 +110,28 @@
                }) : [{text:'',value:''}]
            },
            logT:function(){
-            //    console.log(this.$store.state.logStream)
                return this.$store.getters.getLog
-           }
+           },
         },
         methods: {
-            add () {
-                this.$router.push('/addNode')
+            nodeHandleCommand(command){
+                switch(command){
+                    case "add":
+                        this.$router.push('/addNode')
+                        break
+                    case "import":
+                        this.importFile()
+                        break
+                }
+            },
+            logDownloadBtn(){
+                let savePath = this.$electron.remote.dialog.showSaveDialog({defaultPath:this.logTitle,filters:[{name: 'Text', extensions: ['txt']}]})
+                if(savePath.length == 0 ) return
+                this.$store.dispatch('SSH2SaveLog',savePath).then(()=>{
+                    this.$message.success('保存成功')
+                }).catch((err)=>{
+                    this.$message.error(err)
+                })
             },
             getList() {
                 this.$store.dispatch('getNodeList').then((data)=>{
@@ -121,8 +154,14 @@
                 });
             },
             logClose(done){
-                this.$store.dispatch('SSH2CloseLog')
+                this.logStop()
+                this.logStopDis = false
                 done()
+            },
+            logStop(){
+                this.$store.dispatch('SSH2CloseLog')
+                this.logStopDis = true
+              
             },
             handleCommand(command){
                 switch(command.type){
@@ -150,7 +189,8 @@
                         break
                     case "log":
                         this.logDialogVisible = true
-                        this.logTitle = command.params.name + '日志信息'
+                        this.logTitle = command.params.name + '节点日志信息'
+                        console.log(this.$refs.logAreadiv)
                         this.$store.dispatch('SSH2ShowLog',command.params).catch((err)=>{
                             this.$message.error(err)
                         })
@@ -238,8 +278,36 @@
         },
         mounted() {
             this.getList()
-            // this.$electron.shell.openExternal('cmd',{activate:true})
+            // console.log(this.$electron.remote.BrowserWindow.getAllWindows()[0].getContentSize())
+                
+            let win =this.$electron.remote.BrowserWindow.getFocusedWindow()
+            win.on('resize', (e, cmd)=>{
+                this.logAreaRows = Math.round(win.getContentSize()[1]/30)
+                if(this.$refs.logAreadiv){
+                    this.$refs.logAreadiv.style.height =  Math.round(win.getContentSize()[1]-160) + 'px'
+                }
+            })
         },
     }
 
 </script>
+
+<style scoped>
+.row-bg{
+    padding-top: 10px
+}
+.logArea{
+    font-size: 12px;
+    width:100%;
+    flex: 1;
+    white-space:pre-wrap;
+    background-color:rgba(8, 4, 4, 0.808);
+    color:antiquewhite;
+}
+.logAreadiv{
+    display: flex;
+    flex-direction: column;
+    height: 400px;
+    overflow:scroll;
+}
+</style>

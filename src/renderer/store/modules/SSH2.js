@@ -1,6 +1,6 @@
 import { Notification } from 'element-ui'
 import node_ssh from 'node-ssh'
-
+import fs from 'fs'
 const ssh = new node_ssh()
 
 const ssh2 = {
@@ -9,7 +9,7 @@ const ssh2 = {
     },
     mutations: {
       readLog(state,stream){
-        state.logStream = stream 
+        state.logStream=(state.logStream + stream).substr(-1000000)
       },
       clearLog(state){
         state.logStream = "" 
@@ -17,10 +17,29 @@ const ssh2 = {
     },
     getters: {
         getLog: state => {
+          return state.logStream.substr(-100000)
+        },
+        getLogAll: state => {
           return state.logStream
         }
       },
     actions: {
+        SSH2SaveLog({state},savePath){
+            return new Promise((resolve,reject)=>{
+                let arr = state.logStream.split('\n')
+                let out = ""
+                arr.forEach((val)=>{
+                    out += val + '\r\n'
+                })
+                fs.writeFile(savePath,out, err => {
+                    if (err) {
+                        reject('保存文件失败:'+err)
+                    }else{
+                        resolve()
+                    }
+                })
+            })
+        },
         SSH2Connect({ commit },node){
             return new Promise((resolve, reject) => {
                 ssh.connect({
@@ -29,10 +48,8 @@ const ssh2 = {
                     port: node.port,
                     password:node.password
                   }).then(()=>{
-                    console.log(1)
                     resolve()
                   }).catch((err)=>{
-                    console.log(err)
                     reject(err)
                   })
             })  
@@ -99,10 +116,10 @@ const ssh2 = {
         },
         SSH2CloseLog({commit}){
             ssh.dispose()
-            commit("clearLog")
         },
         SSH2ShowLog({commit},nodeinfo){
             return new Promise((resolve, reject) => {
+                commit("clearLog")
                 ssh.connect({
                     host: nodeinfo.ip,
                     username: nodeinfo.user,
@@ -112,7 +129,7 @@ const ssh2 = {
                         let path = nodeinfo.logpath
                         ssh.exec('find '+path,[],{
                         }).then(()=>{
-                            ssh.exec('export LANG=zh_CN.UTF-8 ; tail -100f '+path, [], {
+                            ssh.exec('export LANG=zh_CN.UTF-8 ; tail -f '+path, [], {
                                 cwd:path.substr(0,path.lastIndexOf('/')),
                                 onStdout(chunk) {
                                     commit("readLog",chunk.toString())
