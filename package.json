@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "author": "zhengel <66559304@qq.com>",
   "description": "打版助手2.0.0版",
-  "license": null,
+  "license": "MIT",
   "main": "./dist/electron/main.js",
   "scripts": {
     "build": "node .electron-vue/build.js && electron-builder",
