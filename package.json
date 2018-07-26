@@ -2,7 +2,7 @@
   "name": "playversion",
   "version": "2.0.0",
   "author": "zhengel <66559304@qq.com>",
-  "description": "An electron-vue project",
+  "description": "打版助手2.0.0版",
   "license": null,
   "main": "./dist/electron/main.js",
   "scripts": {

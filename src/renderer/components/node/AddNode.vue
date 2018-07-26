@@ -72,8 +72,7 @@
             { required: true, validator:this.IpRules, trigger: 'blur' }
           ],
           port: [
-            { required: true, message: '请输入端口', trigger: 'blur' },
-            { type : 'number' ,message:'端口必须是数字',trigger:'blur' }
+            { required: true, message: '请输入端口', trigger: 'blur' }
           ],
           user: [
             { required: true, message: '请输入节点登陆用户名', trigger: 'blur' }

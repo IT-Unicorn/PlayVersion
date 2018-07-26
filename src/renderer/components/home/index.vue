@@ -35,8 +35,9 @@
                 :filters = "nodeFilter"
                 :filter-method = "filterHandler"
                 align="center"
+                sortable
               ></el-table-column>
-              <el-table-column prop="name" label="节点名称" align="center"></el-table-column>
+              <el-table-column prop="name" label="节点名称" align="center" sortable></el-table-column>
               <el-table-column prop="ip" label="节点地址(IP)" width="120" align="center"></el-table-column>
               <el-table-column prop="port" label="端口" width="50" align="center"></el-table-column>
               <el-table-column prop="user" label="用户名" align="center"></el-table-column>
@@ -88,7 +89,6 @@
                logTitle:"日志",
                logDialogVisible: false,
                logText : "",
-               logAreaRows : "20",
                logStopDis:false
             }
         },
@@ -151,7 +151,9 @@
                         this.$message.success('删除成功')
                         this.getList()
                         })
-                });
+                }).catch((err)=>{
+                    return
+                })
             },
             logClose(done){
                 this.logStop()
@@ -190,7 +192,7 @@
                     case "log":
                         this.logDialogVisible = true
                         this.logTitle = command.params.name + '节点日志信息'
-                        console.log(this.$refs.logAreadiv)
+                        // console.log(this.$refs.logAreadiv)
                         this.$store.dispatch('SSH2ShowLog',command.params).catch((err)=>{
                             this.$message.error(err)
                         })
@@ -277,12 +279,9 @@
             }
         },
         mounted() {
-            this.getList()
-            // console.log(this.$electron.remote.BrowserWindow.getAllWindows()[0].getContentSize())
-                
+            this.getList()                
             let win =this.$electron.remote.BrowserWindow.getFocusedWindow()
             win.on('resize', (e, cmd)=>{
-                this.logAreaRows = Math.round(win.getContentSize()[1]/30)
                 if(this.$refs.logAreadiv){
                     this.$refs.logAreadiv.style.height =  Math.round(win.getContentSize()[1]-160) + 'px'
                 }
