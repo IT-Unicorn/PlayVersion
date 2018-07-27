@@ -135,6 +135,7 @@
           else { callback() } 
       }
     },
+    //如果有id信息,说明是编辑已有菜单
     created(){
       if(this.$route.params.id){
         this.nodeId = this.$route.params.id

@@ -1,6 +1,7 @@
 <template>
     <el-container>
         <el-header height = '30px'>
+            <!-- 新增节点按钮 -->
              <el-dropdown @command="nodeHandleCommand" trigger="click">
                 <el-button >
                     添加节点<i class="el-icon-arrow-down el-icon--right"></i>
@@ -10,6 +11,7 @@
                     <el-dropdown-item command = "import">导入1.0配置</el-dropdown-item>
                 </el-dropdown-menu>
             </el-dropdown>
+            <!-- 批量处理按钮 -->
             <el-dropdown @command="batchHandleCommand" trigger="click">
                 <el-button >
                     批量处理<i class="el-icon-arrow-down el-icon--right"></i>
@@ -21,8 +23,10 @@
                     <el-dropdown-item command = "clear">清缓存</el-dropdown-item>
                 </el-dropdown-menu>
             </el-dropdown>
+            <el-button @click = "directionDialogVisible = !directionDialogVisible">版本信息</el-button>
         </el-header>
         <el-main>
+            <!-- 节点列表 -->
             <el-table :data= "nodelist" 
                 style="width: 100%"
                 border 
@@ -41,6 +45,7 @@
               <el-table-column prop="ip" label="节点地址(IP)" width="120" align="center"></el-table-column>
               <el-table-column prop="port" label="端口" width="50" align="center"></el-table-column>
               <el-table-column prop="user" label="用户名" align="center"></el-table-column>
+              <!-- 每行记录后面的操作按钮 -->
               <el-table-column align="center" width="130" fixed="right">
                 <template slot-scope="scope">
                 <el-button  size="small" type="success" @click="handleUpdate(scope.row)" icon="el-icon-edit">
@@ -49,6 +54,7 @@
                 </el-button>
                 </template>
               </el-table-column>
+              <!-- 每行记录后面的更多操作按钮 -->
               <el-table-column align="center" width="120" fixed="right">
                 <template slot-scope="scope">
                 <el-dropdown @command="handleCommand" trigger="click">
@@ -65,6 +71,7 @@
               </el-table-column>
             </el-table>
         </el-main>
+        <!-- 日志读取界面 -->
         <el-dialog :title = "logTitle + '(ESC退出)'" :visible.sync="logDialogVisible" fullscreen center :before-close = "logClose">
             <div class="logAreadiv" ref = "logAreadiv">
                 <p class="logArea">{{this.logT}}</p>
@@ -74,33 +81,41 @@
             <el-button @click="logStop()" :disabled = "logStopDis">停止读取</el-button>
             </el-row>
         </el-dialog>
+        <el-dialog title = "版本信息(ESC退出)" :visible.sync="directionDialogVisible" fullscreen center :before-close = "logClose">
+            <ver-direction></ver-direction>
+        </el-dialog>
     </el-container>
     
 </template>
 
 <script>
+import direction from '../direction'
     export default {
         name: 'Home',
         data(){
             return {
-               nodelist:[],
-               loading:"",
-               multipleSelection:[],
-               logTitle:"日志",
-               logDialogVisible: false,
-               logText : "",
-               logStopDis:false
+               nodelist:[],  //绑定节点列表
+               loading:"",   //屏幕加载控制
+               multipleSelection:[],  //多选列表
+               logTitle:"", //日志框标题和导出默认文件名
+               logDialogVisible: false,  //日志框显示控制
+               logStopDis:false,    //日志框中停止按钮禁用控制
+               directionDialogVisible  : false //版本信息显示
             }
         },
+        components: {
+            "ver-direction" : direction
+        },
         watch:{
+            // 监控日志读取,设置滚动条
             logT : function(val,oldval){
-                // this.$refs.tarea.$refs.textarea.scrollTop = this.$refs.tarea.$refs.textarea.scrollHeight +500
                 if(this.$refs.logAreadiv){
                     this.$refs.logAreadiv.scrollTop = this.$refs.logAreadiv.scrollHeight + 5000
                 }
             },
         },
         computed:{
+           //分组筛选项 -> 查询节点列表, 用Set过滤掉重复记录
            nodeFilter:function(){
                return this.nodelist.length > 0 ? 
                 Array.from(new Set(this.nodelist.map((value)=>{
@@ -109,11 +124,13 @@
                    return {text:val,value:val}
                }) : [{text:'',value:''}]
            },
+           //日志
            logT:function(){
                return this.$store.getters.getLog
            },
         },
         methods: {
+            //节点新增下来菜单
             nodeHandleCommand(command){
                 switch(command){
                     case "add":
@@ -124,23 +141,55 @@
                         break
                 }
             },
-            logDownloadBtn(){
-                let savePath = this.$electron.remote.dialog.showSaveDialog({defaultPath:this.logTitle,filters:[{name: 'Text', extensions: ['txt']}]})
-                if(savePath.length == 0 ) return
-                this.$store.dispatch('SSH2SaveLog',savePath).then(()=>{
-                    this.$message.success('保存成功')
-                }).catch((err)=>{
-                    this.$message.error(err)
-                })
+            //批量操作下来菜单
+            batchHandleCommand(command){
+                if(this.multipleSelection.length == 0){
+                    this.$message.error('请选择要处理的记录')
+                    return
+                }
+                switch(command){
+                    case "upload":
+                        let localPath = this.$electron.remote.dialog.showOpenDialog({properties: ['openDirectory']})
+                        if(!localPath) return
+                        this.loading = this.$loading({
+                            lock: true,
+                            text: 'Loading',
+                            spinner: 'el-icon-loading',
+                            background: 'rgba(0, 0, 0, 0.7)'
+                        });
+                        this.$store.dispatch(
+                            'SSH2BatchPutDir',{
+                                localPath : localPath[0],
+                                nodeinfo : this.multipleSelection
+                            }   
+                        ).then(()=>{
+                            this.loading.close()
+                            this.$message.success('批量操作完成')
+                        })
+                        break
+                    default:
+                        this.loading = this.$loading({
+                            lock: true,
+                            text: 'Loading',
+                            spinner: 'el-icon-loading',
+                            background: 'rgba(0, 0, 0, 0.7)'
+                        });
+                        this.$store.dispatch(
+                            'SSH2BatchExec',{
+                                type : command,
+                                nodeinfo : this.multipleSelection
+                            }   
+                        ).then(()=>{
+                            this.loading.close()
+                            this.$message.success('批量操作完成')
+                        })
+                }
             },
-            getList() {
-                this.$store.dispatch('getNodeList').then((data)=>{
-                    this.nodelist = data
-                })
-            },
+            //编辑节点信息按钮
             handleUpdate(row){
                 this.$router.push({ path: '/EditNode/'+row._id })
             },
+            //删除节点信息按钮
             handleDelete(row){
                 this.$confirm('此操作将永久删除, 是否继续?', '提示', {
                     confirmButtonText: '确定',
@@ -155,16 +204,7 @@
                     return
                 })
             },
-            logClose(done){
-                this.logStop()
-                this.logStopDis = false
-                done()
-            },
-            logStop(){
-                this.$store.dispatch('SSH2CloseLog')
-                this.logStopDis = true
-              
-            },
+            //更多节点操作下来菜单
             handleCommand(command){
                 switch(command.type){
                     case "upload":
@@ -218,56 +258,44 @@
                 }
                 
             },
-            batchHandleCommand(command){
-                if(this.multipleSelection.length == 0){
-                    this.$message.error('请选择要处理的记录')
-                    return
-                }
-                switch(command){
-                    case "upload":
-                        let localPath = this.$electron.remote.dialog.showOpenDialog({properties: ['openDirectory']})
-                        if(!localPath) return
-                        this.loading = this.$loading({
-                            lock: true,
-                            text: 'Loading',
-                            spinner: 'el-icon-loading',
-                            background: 'rgba(0, 0, 0, 0.7)'
-                        });
-                        this.$store.dispatch(
-                            'SSH2BatchPutDir',{
-                                localPath : localPath[0],
-                                nodeinfo : this.multipleSelection
-                            }   
-                        ).then(()=>{
-                            this.loading.close()
-                            this.$message.success('批量操作完成')
-                        })
-                        break
-                    default:
-                        this.loading = this.$loading({
-                            lock: true,
-                            text: 'Loading',
-                            spinner: 'el-icon-loading',
-                            background: 'rgba(0, 0, 0, 0.7)'
-                        });
-                        this.$store.dispatch(
-                            'SSH2BatchExec',{
-                                type : command,
-                                nodeinfo : this.multipleSelection
-                            }   
-                        ).then(()=>{
-                            this.loading.close()
-                            this.$message.success('批量操作完成')
-                        })
-                }
-            },
+            //选择筛选,重新选择筛选的时候,清空已选中列表
             handleSelectionChange(val){
                 this.multipleSelection = val
             },
+            //筛选响应
             filterHandler(value, row, column) {
                 this.$refs.multipleTable.clearSelection()
                 return row.group === value;
             },
+            //获取节点列表
+            getList() {
+                this.$store.dispatch('getNodeList').then((data)=>{
+                    this.nodelist = data
+                })
+            },
+            //日志下载按钮
+            logDownloadBtn(){
+                let savePath = this.$electron.remote.dialog.showSaveDialog({defaultPath:this.logTitle,filters:[{name: 'Text', extensions: ['txt']}]})
+                if(savePath.length == 0 ) return
+                this.$store.dispatch('SSH2SaveLog',savePath).then(()=>{
+                    this.$message.success('保存成功')
+                }).catch((err)=>{
+                    this.$message.error(err)
+                })
+            },
+            //日志框关闭响应
+            logClose(done){
+                this.logStop()
+                this.logStopDis = false
+                done()
+            },
+            //暂停读取日志按钮
+            logStop(){
+                this.$store.dispatch('SSH2CloseLog')
+                this.logStopDis = true
+              
+            },
+            //导入原1.0版本配置文件
             importFile(){
                 let filePath = this.$electron.remote.dialog.showOpenDialog({filters:[{name: 'Properties', extensions: ['properties']}],properties: ['openFile']})
                 if(!filePath) return
@@ -278,6 +306,7 @@
                 })
             }
         },
+        //挂载钩子函数
         mounted() {
             this.getList()                
             let win =this.$electron.remote.BrowserWindow.getFocusedWindow()
