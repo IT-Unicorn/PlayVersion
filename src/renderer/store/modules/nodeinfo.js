@@ -1,5 +1,6 @@
 import {Node} from '../../../database'
 import fs from 'fs'
+import {compileStr} from '@/utils/util.js'
 const nodeinfo = {
     state: {
         
@@ -7,6 +8,8 @@ const nodeinfo = {
     actions: {
         addNode({ commit },nodeInfo){
             return new Promise((resolve, reject) => {
+                //密码加密
+                nodeInfo.password = compileStr(nodeInfo.password)
                 Node.insert(nodeInfo,(err,data)=>{
                     if(err) reject(err)
                     resolve()
@@ -23,15 +26,9 @@ const nodeinfo = {
         },
         updateNode({ commit },nodeInfo){
             return new Promise((resolve, reject) => {
+                //密码加密
+                nodeInfo.password = compileStr(nodeInfo.password)
                 Node.update({_id:nodeInfo._id},nodeInfo,{},(err,numReplaced)=>{
-                    if(err) reject(err)
-                    resolve()
-                })
-              })
-        },
-        delNode({ commit },nodeid){
-            return new Promise((resolve, reject) => {
-                Node.remove({_id:nodeid},{},(err,numRemoved)=>{
                     if(err) reject(err)
                     resolve()
                 })
@@ -79,7 +76,7 @@ const nodeinfo = {
                             ip: keyvalue[val+'-host'],
                             port: keyvalue[val+'-port'],
                             user: keyvalue[val+'-user'],
-                            password: new Buffer(keyvalue[val+'-pass'], 'base64').toString(),
+                            password: compileStr(new Buffer(keyvalue[val+'-pass'], 'base64').toString()),
                             apppath: keyvalue[val+'-apppath'],
                             startpath: keyvalue[val+'-statepath'],
                             stoppath: keyvalue[val+'-stoppath'],

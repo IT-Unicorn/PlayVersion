@@ -1,6 +1,7 @@
 import { Notification } from 'element-ui'
 import node_ssh from 'node-ssh'
 import fs from 'fs'
+import {uncompileStr} from '@/utils/util.js'
 const ssh = new node_ssh()
 
 const ssh2 = {
@@ -46,7 +47,7 @@ const ssh2 = {
                     host: node.ip,
                     username: node.user,
                     port: node.port,
-                    password:node.password
+                    password:uncompileStr(node.password)
                   }).then(()=>{
                     resolve()
                   }).catch((err)=>{
@@ -54,7 +55,7 @@ const ssh2 = {
                   })
             })  
         },
-        SSH2PutDirectory({commit},props){
+        SSH2PutDirectory({dispatch},props){
             let localpath = props.localPath
             let remotepath = props.nodeinfo.apppath
             return new Promise((resolve, reject) => {
@@ -65,12 +66,7 @@ const ssh2 = {
                         remotepath.substr(remotepath.lastIndexOf('/') + 1).toLowerCase()
                     )  
                 }
-                ssh.connect({
-                    host: props.nodeinfo.ip,
-                    username: props.nodeinfo.user,
-                    port: props.nodeinfo.port,
-                    password:props.nodeinfo.password
-                    }).then(()=>{
+                dispatch('SSH2Connect',props.nodeinfo).then(()=>{
                         ssh.putDirectory(localpath, remotepath,{
                             recursive: true,
                             concurrency: 10
@@ -86,14 +82,9 @@ const ssh2 = {
                     })
             })  
         },
-        SSH2Exec({commit},props){
+        SSH2Exec({dispatch},props){
             return new Promise((resolve, reject) => {
-                ssh.connect({
-                    host: props.nodeinfo.ip,
-                    username: props.nodeinfo.user,
-                    port: props.nodeinfo.port,
-                    password:props.nodeinfo.password
-                    }).then(()=>{
+                dispatch('SSH2Connect',props.nodeinfo).then(()=>{
                         let path = props.nodeinfo[props.type+'path']
                         if(!path) return reject('未维护路径信息')
                         ssh.exec('find '+path,[],{
@@ -118,15 +109,10 @@ const ssh2 = {
         SSH2CloseLog({commit}){
             ssh.dispose()
         },
-        SSH2ShowLog({commit},nodeinfo){
+        SSH2ShowLog({commit,dispatch},nodeinfo){
             return new Promise((resolve, reject) => {
                 commit("clearLog")
-                ssh.connect({
-                    host: nodeinfo.ip,
-                    username: nodeinfo.user,
-                    port: nodeinfo.port,
-                    password:nodeinfo.password
-                    }).then(()=>{
+                dispatch('SSH2Connect',nodeinfo).then(()=>{
                         let path = nodeinfo.logpath
                         if(!path) return reject('未维护路径信息')
                         ssh.exec('find '+path,[],{
