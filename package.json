@@ -1,8 +1,8 @@
 {
   "name": "playversion",
-  "version": "2.0.1",
+  "version": "2.0.0",
   "author": "zhengel <66559304@qq.com>",
-  "description": "打版助手2.0.1版",
+  "description": "打版助手2.0.0版",
   "license": "MIT",
   "main": "./dist/electron/main.js",
   "scripts": {
@@ -18,13 +18,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/IT-Unicorn/PlayVersion.git"
+    "url": "git+https://github.com/IT-Unicorn/PlayVersion.git"
   },
   "build": {
     "productName": "PlayVersion",
-    "appId": "org.simulatedgreg.electron-vue",
+    "appId": "com.it-unicorn.playversion",
+    "artifactName": "playversion.exe",
     "directories": {
       "output": "build"
+    },
+    "publish": {
+      "provider": "github"
     },
     "files": [
       "dist/electron/**/*"
@@ -56,10 +60,10 @@
   },
   "dependencies": {
     "axios": "^0.16.1",
+    "electron-updater": "^3.0.3",
     "element-ui": "^2.4.4",
     "nedb": "^1.8.0",
     "node-ssh": "^5.1.2",
-    "update-electron-app": "^1.3.0",
     "vue": "^2.3.3",
     "vue-devtools": "^4.1.4",
     "vue-electron": "^1.0.6",
@@ -82,9 +86,9 @@
     "del": "^3.0.0",
     "devtron": "^1.4.0",
     "electron": "^1.7.5",
+    "electron-builder": "^19.19.1",
     "electron-debug": "^1.4.0",
     "electron-devtools-installer": "^2.2.0",
-    "electron-builder": "^19.19.1",
     "extract-text-webpack-plugin": "^3.0.0",
     "file-loader": "^0.11.2",
     "html-webpack-plugin": "^2.30.1",

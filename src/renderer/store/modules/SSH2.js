@@ -95,6 +95,7 @@ const ssh2 = {
                     password:props.nodeinfo.password
                     }).then(()=>{
                         let path = props.nodeinfo[props.type+'path']
+                        if(!path) return reject('未维护路径信息')
                         ssh.exec('find '+path,[],{
                         }).then(()=>{
                             ssh.exec('pwd;'+path, [], {
@@ -127,6 +128,7 @@ const ssh2 = {
                     password:nodeinfo.password
                     }).then(()=>{
                         let path = nodeinfo.logpath
+                        if(!path) return reject('未维护路径信息')
                         ssh.exec('find '+path,[],{
                         }).then(()=>{
                             ssh.exec('export LANG=zh_CN.UTF-8 ; tail -f '+path, [], {
@@ -156,7 +158,6 @@ const ssh2 = {
                         title: '提示',
                         message: props.nodeinfo[i].name + '节点:' + err,
                         type: 'warning',
-                        offset: 100,
                         duration: 0
                     })
                 })

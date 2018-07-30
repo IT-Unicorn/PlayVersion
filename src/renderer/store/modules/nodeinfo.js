@@ -1,4 +1,4 @@
-import db from '../../../database'
+import {Node} from '../../../database'
 import fs from 'fs'
 const nodeinfo = {
     state: {
@@ -7,7 +7,7 @@ const nodeinfo = {
     actions: {
         addNode({ commit },nodeInfo){
             return new Promise((resolve, reject) => {
-                db.insert(nodeInfo,(err,data)=>{
+                Node.insert(nodeInfo,(err,data)=>{
                     if(err) reject(err)
                     resolve()
                 })
@@ -15,7 +15,7 @@ const nodeinfo = {
         },
         delNode({ commit },nodeid){
             return new Promise((resolve, reject) => {
-                db.remove({_id:nodeid},{},(err,numRemoved)=>{
+                Node.remove({_id:nodeid},{},(err,numRemoved)=>{
                     if(err) reject(err)
                     resolve()
                 })
@@ -23,7 +23,7 @@ const nodeinfo = {
         },
         updateNode({ commit },nodeInfo){
             return new Promise((resolve, reject) => {
-                db.update({_id:nodeInfo._id},nodeInfo,{},(err,numReplaced)=>{
+                Node.update({_id:nodeInfo._id},nodeInfo,{},(err,numReplaced)=>{
                     if(err) reject(err)
                     resolve()
                 })
@@ -31,7 +31,7 @@ const nodeinfo = {
         },
         delNode({ commit },nodeid){
             return new Promise((resolve, reject) => {
-                db.remove({_id:nodeid},{},(err,numRemoved)=>{
+                Node.remove({_id:nodeid},{},(err,numRemoved)=>{
                     if(err) reject(err)
                     resolve()
                 })
@@ -39,7 +39,7 @@ const nodeinfo = {
         },
         getNodeById({ commit },nodeid){
             return new Promise((resolve, reject) => {
-                db.findOne({_id:nodeid},{},(err,data)=>{
+                Node.findOne({_id:nodeid},{},(err,data)=>{
                     if(err) reject(err)
                     resolve(data)
                 })
@@ -47,7 +47,7 @@ const nodeinfo = {
         },
         getNodeList({ commit }){
             return new Promise((resolve, reject) => {
-                db.find({},(err,data)=>{
+                Node.find({},(err,data)=>{
                     if(err) reject(err)
                     resolve(data)
                 })
@@ -73,7 +73,7 @@ const nodeinfo = {
                     }
                     let setKey = Array.from(new Set(arrKey))
                     setKey.forEach(val => {
-                        db.insert({
+                        Node.insert({
                             name: val,
                             group:'导入',
                             ip: keyvalue[val+'-host'],

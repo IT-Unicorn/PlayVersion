@@ -23,7 +23,7 @@
                     <el-dropdown-item command = "clear">清缓存</el-dropdown-item>
                 </el-dropdown-menu>
             </el-dropdown>
-            <el-button @click = "directionDialogVisible = !directionDialogVisible">版本信息</el-button>
+            <el-button @click = "pushDirection()">版本信息</el-button>
         </el-header>
         <el-main>
             <!-- 节点列表 -->
@@ -81,15 +81,10 @@
             <el-button @click="logStop()" :disabled = "logStopDis">停止读取</el-button>
             </el-row>
         </el-dialog>
-        <el-dialog title = "版本信息(ESC退出)" :visible.sync="directionDialogVisible" fullscreen center :before-close = "logClose">
-            <ver-direction></ver-direction>
-        </el-dialog>
     </el-container>
-    
 </template>
 
 <script>
-import direction from '../direction'
     export default {
         name: 'Home',
         data(){
@@ -102,9 +97,6 @@ import direction from '../direction'
                logStopDis:false,    //日志框中停止按钮禁用控制
                directionDialogVisible  : false //版本信息显示
             }
-        },
-        components: {
-            "ver-direction" : direction
         },
         watch:{
             // 监控日志读取,设置滚动条
@@ -130,6 +122,9 @@ import direction from '../direction'
            },
         },
         methods: {
+            pushDirection(){
+                this.$router.push('/direction')
+            },
             //节点新增下来菜单
             nodeHandleCommand(command){
                 switch(command){

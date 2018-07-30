@@ -12,18 +12,6 @@ Vue.http = Vue.prototype.$http = axios
 Vue.config.productionTip = false
 
 
-// //正式环境监测更新
-// const updater = require("electron-updater");
-// const autoUpdater = updater.autoUpdater;
-
-// autoUpdater.setFeedURL({
-//   provider: "github", 
-// });
-
-// autoUpdater.on('update-available', function (info) {
-//   this.$message.success(info)
-// });
-
 
 /* eslint-disable no-new */
 new Vue({

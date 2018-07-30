@@ -85,19 +85,7 @@
           ],
           apppath: [
             { required: true, message: '请输入应用路径', trigger: 'blur' }
-          ],
-          startpath: [
-            { required: true, message: '请输入启服务脚本路径', trigger: 'blur' }
-          ],
-          stoppath: [
-            { required: true, message: '请输入停服务脚本路径', trigger: 'blur' }
-          ],
-          clearpath: [
-            { required: true, message: '请输入清缓存脚本路径', trigger: 'blur' }
-          ],
-          logpath: [
-            { required: true, message: '请输入日志存放路径', trigger: 'blur' }
-          ],
+          ]
         },
         nodeId:null
       };

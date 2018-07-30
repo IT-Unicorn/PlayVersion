@@ -17,6 +17,10 @@ export default new Router({
       path: '/EditNode/:id',
       name: 'EditNode',
       component: require('@/components/node/AddNode').default
+    },{
+      path: '/direction',
+      name: 'Direction',
+      component: require('@/components/direction').default
     },
     {
       path: '*',
