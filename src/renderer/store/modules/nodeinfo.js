@@ -1,6 +1,6 @@
 import {Node} from '../../../database'
 import fs from 'fs'
-import {compileStr} from '@/utils/util.js'
+import {compileStr,uncompileStr} from '@/utils/util.js'
 const nodeinfo = {
     state: {
         
@@ -38,6 +38,7 @@ const nodeinfo = {
             return new Promise((resolve, reject) => {
                 Node.findOne({_id:nodeid},{},(err,data)=>{
                     if(err) reject(err)
+                    data.password = uncompileStr(data.password) 
                     resolve(data)
                 })
               })
