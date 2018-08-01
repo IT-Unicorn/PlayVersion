@@ -85,6 +85,7 @@
 </template>
 
 <script>
+import {DirectoryFiles} from '@/utils/util.js'
     export default {
         name: 'Home',
         data(){
