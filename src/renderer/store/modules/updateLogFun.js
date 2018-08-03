@@ -19,6 +19,30 @@ const UpdateLogFun = {
                 })
             })
         },
+        UpdateLogDelete({dispatch},id) {
+            return new Promise((resolve,reject)=>{
+                UpdateLog.remove({_id:id},{},(err,numRemoved)=>{
+                    if(err) reject(err)
+                    resolve()
+                })
+            })
+        },
+        UpdateLogGetListByNodeId({dispatch},id) {
+            return new Promise((resolve,reject)=>{
+                UpdateLog.find({nodeid:id}).sort({createDate:-1}).limit(5).exec((err,data)=>{
+                    if(err) reject(err)
+                    resolve(data)
+                })
+            })
+        },
+        UpdateLogGetLogById({ commit },id){
+            return new Promise((resolve, reject) => {
+                UpdateLog.findOne({_id:id},{},(err,data)=>{
+                    if(err) reject(err)
+                    resolve(data)
+                })
+            })
+        },
     }
 
 }

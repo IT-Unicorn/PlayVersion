@@ -39,6 +39,10 @@
 
     Node使用SSH连接Linux组件
 
+> [vue-code-diff](https://github.com/ddchef/vue-code-diff)
+
+    文本比对插件
+    
 ---
 
 ## 下载使用

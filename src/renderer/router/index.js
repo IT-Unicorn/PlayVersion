@@ -21,6 +21,10 @@ export default new Router({
       path: '/direction',
       name: 'Direction',
       component: require('@/components/direction').default
+    },{
+      path: '/UploadLog/:id',
+      name: 'UploadLog',
+      component: require('@/components/uploadlog').default
     },
     {
       path: '*',

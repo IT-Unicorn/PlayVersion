@@ -1,6 +1,7 @@
 <template>
     <el-container>
-        <el-header height = '30px'>
+        <el-header>
+            <el-row type ="flex" align ="middle" class = "header-row">
             <!-- 新增节点按钮 -->
              <el-dropdown @command="nodeHandleCommand" trigger="click">
                 <el-button >
@@ -24,6 +25,7 @@
                 </el-dropdown-menu>
             </el-dropdown>
             <el-button @click = "pushDirection()">版本信息</el-button>
+            </el-row>
         </el-header>
         <el-main>
             <!-- 节点列表 -->
@@ -65,6 +67,7 @@
                     <el-dropdown-item :command = "{type:'stop',params:scope.row}">停服务</el-dropdown-item>
                     <el-dropdown-item :command = "{type:'clear',params:scope.row}">清缓存</el-dropdown-item>
                     <el-dropdown-item :command = "{type:'log',params:scope.row}">查看日志</el-dropdown-item>
+                    <el-dropdown-item :command = "{type:'uploadlog',params:scope.row}">上传补丁记录</el-dropdown-item>
                 </el-dropdown-menu>
                 </el-dropdown>
                 </template>
@@ -81,6 +84,28 @@
             <el-button @click="logStop()" :disabled = "logStopDis">停止读取</el-button>
             </el-row>
         </el-dialog>
+        <!-- 上传补丁记录展示 -->
+        <el-dialog :title = "uploadlogTitle + '(ESC退出)'" :visible.sync="uploadlogDialogVisible" center :before-close = "uploadlogClose">
+            <el-table :data="uploadList" style="width: 100%">
+            <el-table-column label="日期" width="200">
+                <template slot-scope="scope">
+                    <i class="el-icon-time"></i>
+                    <span style="margin-left: 10px">{{ scope.row.createDate | parseTime()}}</span>
+                </template>
+            </el-table-column>
+            <el-table-column label="上传文件数" >
+                <template slot-scope="scope">
+                   {{ scope.row.files | count()}}
+                </template>
+            </el-table-column>
+            <el-table-column align="center" width="130" fixed="right">
+                <template slot-scope="scope">
+                <el-button  size="small" type="success" @click="uploadLogDetail(scope.row._id)" >详情
+                </el-button>
+                </template>
+              </el-table-column>
+        </el-table>
+        </el-dialog>
     </el-container>
 </template>
 
@@ -96,7 +121,10 @@ import {DirectoryFiles} from '@/utils/util.js'
                logTitle:"", //日志框标题和导出默认文件名
                logDialogVisible: false,  //日志框显示控制
                logStopDis:false,    //日志框中停止按钮禁用控制
-               directionDialogVisible  : false //版本信息显示
+               directionDialogVisible  : false, //版本信息显示
+               uploadList:[], //上传补丁记录
+               uploadlogDialogVisible : false, //上传补丁记录框显示控制
+               uploadlogTitle:"" //上传补丁记录框显示名称
             }
         },
         watch:{
@@ -125,6 +153,9 @@ import {DirectoryFiles} from '@/utils/util.js'
         methods: {
             pushDirection(){
                 this.$router.push('/direction')
+            },
+            uploadLogDetail(id){
+                this.$router.push('/UploadLog/'+id)
             },
             //节点新增下来菜单
             nodeHandleCommand(command){
@@ -203,6 +234,13 @@ import {DirectoryFiles} from '@/utils/util.js'
             //更多节点操作下来菜单
             handleCommand(command){
                 switch(command.type){
+                    case "uploadlog":
+                        this.uploadlogDialogVisible = true
+                        this.uploadlogTitle = command.params.name + '节点上传补丁记录'
+                        this.$store.dispatch('UpdateLogGetListByNodeId',command.params._id).then((data)=>{
+                            this.uploadList = data
+                        })
+                        break
                     case "upload":
                         let localPath = this.$electron.remote.dialog.showOpenDialog({properties: ['openDirectory']})
                         if(!localPath) return
@@ -211,7 +249,7 @@ import {DirectoryFiles} from '@/utils/util.js'
                             text: 'Loading',
                             spinner: 'el-icon-loading',
                             background: 'rgba(0, 0, 0, 0.7)'
-                        });
+                        })
                         this.$store.dispatch(
                             'SSH2PutDirectory',{
                                 localPath : localPath[0],
@@ -285,6 +323,11 @@ import {DirectoryFiles} from '@/utils/util.js'
                 this.logStopDis = false
                 done()
             },
+            //上传补丁日志框关闭响应
+            uploadlogClose(done){
+                this.uploadList = []
+                done()
+            },
             //暂停读取日志按钮
             logStop(){
                 this.$store.dispatch('SSH2CloseLog')
@@ -305,11 +348,12 @@ import {DirectoryFiles} from '@/utils/util.js'
         //挂载钩子函数
         mounted() {
             this.getList()                
-            let win =this.$electron.remote.BrowserWindow.getFocusedWindow()
+            let win =this.$electron.remote.BrowserWindow.getAllWindows()[0]
             win.on('resize', (e, cmd)=>{
                 if(this.$refs.logAreadiv){
                     this.$refs.logAreadiv.style.height =  Math.round(win.getContentSize()[1]-160) + 'px'
                 }
+
             })
         },
     }

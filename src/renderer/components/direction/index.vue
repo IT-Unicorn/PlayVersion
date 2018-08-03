@@ -1,9 +1,11 @@
 <template>
     <div>
-        <el-row>
-            <el-button @click="goback()">返回首页</el-button>
-            <el-button @click="checkUpdata()">检查版本更新</el-button>
-        </el-row>
+        <el-header>
+            <el-row type ="flex" align ="middle" justify="start" class = "header-row">
+                <el-button @click="goback()">返回首页</el-button>
+                <el-button @click="checkUpdata()">检查版本更新</el-button>
+            </el-row>
+        </el-header>
         <div v-for="(val, key) in this.direction" :key="key">
              <h2 id = "version">{{key}}</h2>
             <el-collapse :v-model="key">
