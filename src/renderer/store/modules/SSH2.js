@@ -1,11 +1,24 @@
 import { Notification } from 'element-ui'
 import node_ssh from 'node-ssh'
 import fs from 'fs'
+import path from 'path'
 import {uncompileStr} from '@/utils/util.js'
+import {DirectoryFiles} from '@/utils/util.js'
+import { remote } from 'electron'
+import  mkdirp from 'mkdirp'
+import iconv from 'iconv-lite'
 const ssh = new node_ssh()
 
+const response1 = async (local,remote) => { await ssh.getFile(local,remote).then(()=>{
+    console.log(1)
+    return Promise.resolve(1);
+  }).catch(error => {
+      console.log(2)
+    return Promise.reject(new Error("Error fetching data"));
+  })
+}
 const ssh2 = {
-    state: {
+    state: { 
         logStream : ""
     },
     mutations: {
@@ -49,16 +62,51 @@ const ssh2 = {
                     port: node.port,
                     password:uncompileStr(node.password)
                   }).then(()=>{
-                    resolve()
+                      //获取服务器字符集
+                    ssh.exec('echo $LANG',[],{}).then((lang)=>{
+                        resolve(lang)
+                    })
                   }).catch((err)=>{
                     reject(err)
                   })
             })  
         },
+        async SSH2GetFile(context,params){
+            let uploadfiles = DirectoryFiles(params.localpath)
+            let localCopyPath = path.join(remote.app.getPath('userData'), 'uploadBackup',params.data._id ,'local')
+            let remoteCopyPath = path.join(remote.app.getPath('userData'), 'uploadBackup',params.data._id ,'remote')
+            let CopyPathArr = []
+            //循环上传文件列表
+            for(let i = 0;i<uploadfiles.length;i++){
+                let val = uploadfiles[i]
+                //备份本地文件
+                let localFilePath = path.join(localCopyPath,params.localpath.substr(params.localpath.lastIndexOf('\\') +1 ),val.replace(params.localpath,''))
+                mkdirp.sync(path.dirname(localFilePath))
+                fs.writeFileSync(localFilePath, fs.readFileSync(val))
+                //备份服务器文件
+                let remoteFilePath = path.join(remoteCopyPath,params.remotepath.substr(params.remotepath.lastIndexOf('/') +1 ),val.replace(params.localpath,''))
+                mkdirp.sync(path.dirname(remoteFilePath))
+                try {
+                    await ssh.getFile(remoteFilePath,val.replace(params.localpath,params.remotepath).replace(/\\/g,'/'))
+                    CopyPathArr.push({
+                        local : localFilePath,
+                        remote : remoteFilePath,
+                        type : 'UPDATE'
+                    })
+                } catch (error) {
+                    CopyPathArr.push({
+                        local : localFilePath,
+                        remote : null,
+                        type : 'INSERT'
+                    })
+                }  
+            }
+            return Promise.resolve(CopyPathArr)
+        },
         SSH2PutDirectory({dispatch},props){
-            let localpath = props.localPath
-            let remotepath = props.nodeinfo.apppath
             return new Promise((resolve, reject) => {
+                let localpath = props.localPath
+                let remotepath = props.nodeinfo.apppath
                 if(localpath.substr(localpath.lastIndexOf('\\') +1 ).toLowerCase() !== 
                     remotepath.substr(remotepath.lastIndexOf('/') + 1).toLowerCase()){
                         return reject('上传目录名与应用路径名不一致:' +
@@ -66,20 +114,46 @@ const ssh2 = {
                         remotepath.substr(remotepath.lastIndexOf('/') + 1).toLowerCase()
                     )  
                 }
+                //获取上传文件列表
+                let uploadfiles = DirectoryFiles(localpath)
+                if(uploadfiles.length == 0) {
+                    return reject('上传目录为空,不存在文件')
+                }
+                //登陆
                 dispatch('SSH2Connect',props.nodeinfo).then(()=>{
-                        ssh.putDirectory(localpath, remotepath,{
-                            recursive: true,
-                            concurrency: 10
-                        }).then(()=>{
-                            ssh.dispose()
-                            resolve()
-                        }).catch((err)=>{
-                            ssh.dispose()
-                            reject('上传文件失败:'+err)
-                        })
+                    //生成日志表
+                    dispatch('UpdateLogInsert',{
+                        nodeid: props.nodeinfo._id,
+                        createDate  :new Date()
+                    }).then((data)=>{
+                        dispatch('SSH2GetFile',{localpath : localpath,remotepath:remotepath , data : data}).then((CopyPathArr)=>{
+                            data.files = CopyPathArr
+                            //回写日志表
+                            dispatch('UpdateLogUpdate',data).then(()=>{
+                                ssh.putDirectory(localpath, remotepath,{
+                                    recursive: true,
+                                    concurrency: 10
+                                }).then(()=>{
+                                    ssh.dispose()
+                                    resolve()
+                                }).catch((err)=>{
+                                    ssh.dispose()
+                                    dispatch('UpdateLogDelete',data._id)
+                                    reject('上传文件失败:'+err)
+                                })
+                            }).catch((err)=>{
+                                ssh.dispose()
+                                dispatch('UpdateLogDelete',data._id)
+                                reject('保存日志失败:'+err)
+                            })
+                        })  
                     }).catch((err)=>{
-                        reject('登陆失败:'+err)
+                        ssh.dispose()
+                        reject('生成备份日志失败:'+err)
                     })
+                }).catch((err)=>{
+                    reject('登陆失败:'+err)
+                })
             })  
         },
         SSH2Exec({dispatch},props){
@@ -112,26 +186,27 @@ const ssh2 = {
         SSH2ShowLog({commit,dispatch},nodeinfo){
             return new Promise((resolve, reject) => {
                 commit("clearLog")
-                dispatch('SSH2Connect',nodeinfo).then(()=>{
+                //登陆
+                dispatch('SSH2Connect',nodeinfo).then((lang)=>{
                         let path = nodeinfo.logpath
                         if(!path) return reject('未维护路径信息')
-                        ssh.exec('find '+path,[],{
+                        //判断服务器文件是否存在
+                    dispatch('SSH2FindFile',path).then(()=>{
+                        ssh.exec('tail -f '+path, [], {
+                            cwd:path.substr(0,path.lastIndexOf('/')),
+                            onStdout(chunk) {
+                                commit("readLog",iconv.decode(chunk,lang.toLowerCase().indexOf('utf')>0 ? 'UTF8':'GBK'))
+                            },
                         }).then(()=>{
-                            ssh.exec('export LANG=zh_CN.UTF-8 ; tail -f '+path, [], {
-                                cwd:path.substr(0,path.lastIndexOf('/')),
-                                onStdout(chunk) {
-                                    commit("readLog",chunk.toString())
-                                },
-                            }).then(()=>{
-                                resolve()
-                            })
-                        }).catch((err)=>{
-                            ssh.dispose()
-                            reject('文件未找到:'+path)
+                            resolve()
                         })
                     }).catch((err)=>{
-                    reject('登陆失败:'+err)
+                        ssh.dispose()
+                        reject('文件未找到:'+path)
                     })
+                }).catch((err)=>{
+                reject('登陆失败:'+err)
+                })
             })  
         },
         async SSH2BatchPutDir({dispatch},props){
@@ -165,6 +240,15 @@ const ssh2 = {
                 })
             }
         },
+        SSH2FindFile(context,filePath){
+            return new Promise((resolve,reject)=>{
+                ssh.exec('find '+filePath,[],{}).then(()=>{
+                    resolve()
+                }).catch((err)=>{
+                    reject(err)
+                })
+            }) 
+        }
     }
 }
 

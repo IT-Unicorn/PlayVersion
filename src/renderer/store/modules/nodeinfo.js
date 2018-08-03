@@ -1,4 +1,4 @@
-import {Node} from '../../../database'
+import {Node} from '@/database'
 import fs from 'fs'
 import {compileStr,uncompileStr} from '@/utils/util.js'
 const nodeinfo = {
