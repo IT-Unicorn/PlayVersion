@@ -68,6 +68,7 @@
                     <el-dropdown-item :command = "{type:'clear',params:scope.row}">清缓存</el-dropdown-item>
                     <el-dropdown-item :command = "{type:'log',params:scope.row}">查看日志</el-dropdown-item>
                     <el-dropdown-item :command = "{type:'uploadlog',params:scope.row}">上传补丁记录</el-dropdown-item>
+                    <el-dropdown-item :command = "{type:'top',params:scope.row}">查看服务器状态</el-dropdown-item>
                 </el-dropdown-menu>
                 </el-dropdown>
                 </template>
@@ -234,6 +235,12 @@ import {DirectoryFiles} from '@/utils/util.js'
             //更多节点操作下来菜单
             handleCommand(command){
                 switch(command.type){
+                    case "top":
+                        this.$router.push({
+                            path :'/dashboard',
+                            query : command.params
+                            })
+                        break
                     case "uploadlog":
                         this.uploadlogDialogVisible = true
                         this.uploadlogTitle = command.params.name + '节点上传补丁记录'
@@ -330,7 +337,7 @@ import {DirectoryFiles} from '@/utils/util.js'
             },
             //暂停读取日志按钮
             logStop(){
-                this.$store.dispatch('SSH2CloseLog')
+                this.$store.dispatch('SSH2CloseSSH')
                 this.logStopDis = true
               
             },

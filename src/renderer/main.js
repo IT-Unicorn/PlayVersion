@@ -7,9 +7,13 @@ import ElementUI from 'element-ui'
 import * as filters from './filters' // global filters
 Vue.use(ElementUI)
 import 'element-ui/lib/theme-chalk/index.css'
-
-import iconv from 'iconv-lite'
+//按指定编码格式读取文件
+import iconv from 'iconv-lite' 
 Vue.prototype.$iconv = iconv
+//图表组件
+import echarts from 'echarts'
+Vue.prototype.$echarts = echarts
+
 if (!process.env.IS_WEB) Vue.use(require('vue-electron'))
 Vue.http = Vue.prototype.$http = axios
 Vue.config.productionTip = false

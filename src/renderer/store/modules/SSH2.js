@@ -9,14 +9,7 @@ import  mkdirp from 'mkdirp'
 import iconv from 'iconv-lite'
 const ssh = new node_ssh()
 
-const response1 = async (local,remote) => { await ssh.getFile(local,remote).then(()=>{
-    console.log(1)
-    return Promise.resolve(1);
-  }).catch(error => {
-      console.log(2)
-    return Promise.reject(new Error("Error fetching data"));
-  })
-}
+
 const ssh2 = {
     state: { 
         logStream : ""
@@ -180,7 +173,7 @@ const ssh2 = {
                     })
             })  
         },
-        SSH2CloseLog({commit}){
+        SSH2CloseSSH({commit}){
             ssh.dispose()
         },
         SSH2ShowLog({commit,dispatch},nodeinfo){
@@ -248,6 +241,28 @@ const ssh2 = {
                     reject(err)
                 })
             }) 
+        },
+        SSH2ExecTop({dispatch},params){
+            return new Promise((resolve, reject) => {
+                //登陆
+                console.log(params)
+                dispatch('SSH2Connect',params.nodeinfo).then((lang)=>{
+                    ssh.exec('top', ['-bid1'], {
+                        onStdout(chunk) {
+                            params.callback(chunk.toString())
+                        },
+                    }).then(()=>{
+                        ssh.dispose()
+                        resolve()
+                    }).catch(err=>{
+                        ssh.dispose()
+                    reject('执行失败:'+err)
+                    })
+                }).catch((err)=>{
+                    ssh.dispose()
+                    reject('登陆失败:'+err)
+                })
+            })  
         }
     }
 }

@@ -60,6 +60,7 @@
   },
   "dependencies": {
     "axios": "^0.16.1",
+    "echarts": "^4.1.0",
     "electron-updater": "^3.0.3",
     "element-ui": "^2.4.4",
     "iconv-lite": "^0.4.23",

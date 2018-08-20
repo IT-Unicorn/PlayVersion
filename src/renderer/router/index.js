@@ -25,6 +25,10 @@ export default new Router({
       path: '/UploadLog/:id',
       name: 'UploadLog',
       component: require('@/components/uploadlog').default
+    },{
+      path: '/dashboard',
+      name: 'dashboard',
+      component: require('@/components/dashboard').default
     },
     {
       path: '*',
