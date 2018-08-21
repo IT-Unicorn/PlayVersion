@@ -76,4 +76,25 @@ $ npm run build
 ```
 
 ---
-## 后续功能
+## 功能说明
+
+1. 主界面,可对维护好的服务器进行上传文件,执行脚本等操作
+
+    ![主界面](./static/readmeimg/主界面.png)
+
+2. 添加/维护 服务器节点信息
+
+    ![添加节点](static/readmeimg/添加节点.png)
+
+3. 记录上传补丁记录,并能查看文件差异
+
+    ![上传补丁](static/readmeimg/上传补丁记录.png)
+    ![上传补丁](static/readmeimg/上传补丁记录2.png)
+    ![上传补丁](static/readmeimg/上传补丁记录3.png)
+    ![上传补丁](static/readmeimg/补丁详情.png)
+
+4. 可以实时监控服务器的CPU及内存使用情况
+
+    ![服务器监控](static/readmeimg/服务器监控.png)
+
+

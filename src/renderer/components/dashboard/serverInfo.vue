@@ -139,7 +139,6 @@ export default {
             callback : (ssh,top)=>{
                 if(!this.ssh){
                     this.ssh = ssh
-                    console.log(ssh)
                 }
                 // let topArr = top.trim().split('\n')
                 //CPU
@@ -154,7 +153,7 @@ export default {
                 this.ramData.push(this.ramVal)
                 
                 //监控值太多,卡顿,超过600组数据截取
-                if(this.timeData.length >= 300){
+                if(this.timeData.length >= 100){
                     this.timeData.shift()
                     this.cpuData.shift()
                     this.ramData.shift()
