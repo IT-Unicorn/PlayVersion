@@ -3,13 +3,36 @@
         <el-header>
             <el-row type ="flex" align ="middle" class = "header-row">
                 <el-button @click="goback()">返回首页</el-button>
-                <div id = "nodeTime">{{this.nodeName + '节点'+ this.nodeTime}}</div>
+                <el-button @click="showAside = !showAside">{{showAside?"关闭侧边栏":"显示侧边栏"}}</el-button>
             </el-row>
         </el-header>
-        <el-row type ="flex" justify="center">
+        <el-container>
+            <el-aside width="200px" id = "aside" v-show="showAside">
+                <!-- 节点列表 -->
+                <el-table :data= "nodelist" 
+                    style="width: 100%"
+                    size = "small"
+                    ref="multipleTable"
+                    @selection-change="handleSelectionChange"
+                >
+                    <el-table-column type="selection" width="35" align="center"></el-table-column>
+                    <el-table-column prop="group" label="分组" 
+                        :filters = "nodeFilter"
+                        :filter-method = "filterHandler"
+                        align="center"
+                        sortable
+                    ></el-table-column>
+                    <el-table-column prop="name" label="节点名称" align="center"></el-table-column>
+                </el-table>
+            </el-aside>
+            <el-main>
+                <server-info v-for="data in this.multipleSelection" :key = "data._id" :nodeinfo="data"></server-info>
+            </el-main>
+        </el-container>
+        <!-- <el-row type ="flex" justify="center">
             <el-col :span="12"> <div id ="cpuGauge"></div></el-col>
             <el-col :span="12"> <div id ="ramGauge"></div></el-col>
-        </el-row>
+        </el-row> -->
     </div>
 </template>
 
@@ -20,79 +43,45 @@ export default {
     return {
         nodeTime : '0:0:0',
         nodeName : "",
+        nodelist : [],
+        multipleSelection : [],
+        showAside:true
+    }
+  },
+  components: {
+      serverInfo : require('./serverInfo').default
+  },
+  computed:{
+    //分组筛选项 -> 查询节点列表, 用Set过滤掉重复记录
+    nodeFilter:function(){
+        return this.nodelist.length > 0 ? 
+        Array.from(new Set(this.nodelist.map((value)=>{
+                return value.group
+            }))).map((val)=>{
+            return {text:val,value:val}
+        }) : [{text:'',value:''}]
     }
   },
   mounted(){
     //路由入参, 节点信息
-    let node = this.$route.query
-    this.nodeName = node.name
-    this.ExecTOP(node)
+    this.$store.dispatch('getNodeList').then((data)=>{
+        this.nodelist = data
+    })
   },
   methods: {
     goback(){
-        this.$store.dispatch('SSH2CloseSSH')
         this.$router.push('/')
     },
-    ExecTOP(node){
-        let cpuGauge = this.$echarts.init(document.getElementById('cpuGauge'))
-        this.CpuGauge(cpuGauge,0)
-        let ramGauge = this.$echarts.init(document.getElementById('ramGauge'))
-        this.RamGauge(ramGauge,0)
-
-        this.$store.dispatch('SSH2ExecTop',{
-            nodeinfo : node,
-            callback : (top)=>{
-                let topArr = top.trim().split('\n')
-                this.nodeTime = topArr[0].replace('top','服务器时间:').replace('up','运行').replace('days','天').replace('users','个用户登录').replace('load average','系统负载')
-                this.CpuGauge(cpuGauge,topArr[2].split(',')[0].replace(/[^0-9|\.]/g,""));
-                let ram = topArr[3].replace(/[^0-9|,]/g,"").split(',')
-                console.log((ram[1]/ram[0]*100).toFixed(2) - 0)
-                this.RamGauge(ramGauge,(ram[1]/ram[0]*100).toFixed(2) - 0);
-
-            }
-        }).then(()=>{
-                return
-        }).catch((err)=>{
-            this.$message.error(err)
-        })
+    //选择筛选,重新选择筛选的时候,清空已选中列表
+    handleSelectionChange(val){
+        this.multipleSelection = val
     },
-    CpuGauge(cpuGauge,cpuValue){
-        cpuGauge.setOption({
-            series: [
-                {
-                    name: 'CPU使用率',
-                    type: 'gauge',
-                    detail: {formatter:'{value}%'},
-                    data: [{value: cpuValue, name: 'CPU使用率'}]
-                },
-            ]
-        }, true) 
+    //筛选响应
+    filterHandler(value, row, column) {
+        this.$refs.multipleTable.clearSelection()
+        return row.group === value
     },
-    RamGauge(ramGauge,RamValue){
-        ramGauge.setOption({
-            series: [
-                {
-                    name: 'RAM使用率',
-                    type: 'gauge',
-                    detail: {formatter:'{value}%'},
-                    data: [{value: RamValue, name: 'RAM使用率'}]
-                },
-            ]
-        }, true) 
-    }
   }
 }
 </script>
 
-
-
-<style scoped>
-#cpuGauge{
-    width:300px;
-    height:300px;
-}
-#ramGauge{
-    width:300px;
-    height:300px;
-}
-</style>

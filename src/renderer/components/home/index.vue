@@ -24,6 +24,7 @@
                     <el-dropdown-item command = "clear">清缓存</el-dropdown-item>
                 </el-dropdown-menu>
             </el-dropdown>
+            <el-button @click = "goDashboard()">服务器监控</el-button>
             <el-button @click = "pushDirection()">版本信息</el-button>
             </el-row>
         </el-header>
@@ -68,23 +69,12 @@
                     <el-dropdown-item :command = "{type:'clear',params:scope.row}">清缓存</el-dropdown-item>
                     <el-dropdown-item :command = "{type:'log',params:scope.row}">查看日志</el-dropdown-item>
                     <el-dropdown-item :command = "{type:'uploadlog',params:scope.row}">上传补丁记录</el-dropdown-item>
-                    <el-dropdown-item :command = "{type:'top',params:scope.row}">查看服务器状态</el-dropdown-item>
                 </el-dropdown-menu>
                 </el-dropdown>
                 </template>
               </el-table-column>
             </el-table>
         </el-main>
-        <!-- 日志读取界面 -->
-        <el-dialog :title = "logTitle + '(ESC退出)'" :visible.sync="logDialogVisible" fullscreen center :before-close = "logClose">
-            <div class="logAreadiv" ref = "logAreadiv">
-                <p class="logArea">{{this.logT}}</p>
-            </div>
-            <el-row type="flex" class="row-bg" justify="center">
-            <el-button @click="logDownloadBtn()">保存日志到磁盘</el-button>
-            <el-button @click="logStop()" :disabled = "logStopDis">停止读取</el-button>
-            </el-row>
-        </el-dialog>
         <!-- 上传补丁记录展示 -->
         <el-dialog :title = "uploadlogTitle + '(ESC退出)'" :visible.sync="uploadlogDialogVisible" center :before-close = "uploadlogClose">
             <el-table :data="uploadList" style="width: 100%">
@@ -105,7 +95,7 @@
                 </el-button>
                 </template>
               </el-table-column>
-        </el-table>
+            </el-table>
         </el-dialog>
     </el-container>
 </template>
@@ -120,22 +110,13 @@ import {DirectoryFiles} from '@/utils/util.js'
                loading:"",   //屏幕加载控制
                multipleSelection:[],  //多选列表
                logTitle:"", //日志框标题和导出默认文件名
-               logDialogVisible: false,  //日志框显示控制
-               logStopDis:false,    //日志框中停止按钮禁用控制
                directionDialogVisible  : false, //版本信息显示
                uploadList:[], //上传补丁记录
                uploadlogDialogVisible : false, //上传补丁记录框显示控制
                uploadlogTitle:"" //上传补丁记录框显示名称
             }
         },
-        watch:{
-            // 监控日志读取,设置滚动条
-            logT : function(val,oldval){
-                if(this.$refs.logAreadiv){
-                    this.$refs.logAreadiv.scrollTop = this.$refs.logAreadiv.scrollHeight + 5000
-                }
-            },
-        },
+
         computed:{
            //分组筛选项 -> 查询节点列表, 用Set过滤掉重复记录
            nodeFilter:function(){
@@ -145,11 +126,7 @@ import {DirectoryFiles} from '@/utils/util.js'
                     }))).map((val)=>{
                    return {text:val,value:val}
                }) : [{text:'',value:''}]
-           },
-           //日志
-           logT:function(){
-               return this.$store.getters.getLog
-           },
+           }
         },
         methods: {
             pushDirection(){
@@ -158,7 +135,10 @@ import {DirectoryFiles} from '@/utils/util.js'
             uploadLogDetail(id){
                 this.$router.push('/UploadLog/'+id)
             },
-            //节点新增下来菜单
+            goDashboard(){
+                this.$router.push('/dashboard')
+            },
+            //节点新增下拉菜单
             nodeHandleCommand(command){
                 switch(command){
                     case "add":
@@ -235,12 +215,6 @@ import {DirectoryFiles} from '@/utils/util.js'
             //更多节点操作下来菜单
             handleCommand(command){
                 switch(command.type){
-                    case "top":
-                        this.$router.push({
-                            path :'/dashboard',
-                            query : command.params
-                            })
-                        break
                     case "uploadlog":
                         this.uploadlogDialogVisible = true
                         this.uploadlogTitle = command.params.name + '节点上传补丁记录'
@@ -271,12 +245,10 @@ import {DirectoryFiles} from '@/utils/util.js'
                         })
                         break
                     case "log":
-                        this.logDialogVisible = true
-                        this.logTitle = command.params.name + '节点日志信息'
-                        // console.log(this.$refs.logAreadiv)
-                        this.$store.dispatch('SSH2ShowLog',command.params).catch((err)=>{
-                            this.$message.error(err)
-                        })
+                        this.$router.push({
+                            path :'/runlog',
+                            query : command.params
+                            })
                         break
                     default:
                         this.loading = this.$loading({
@@ -285,7 +257,7 @@ import {DirectoryFiles} from '@/utils/util.js'
                             spinner: 'el-icon-loading',
                             background: 'rgba(0, 0, 0, 0.7)'
                         });
-                        this.$store.dispatch('SSH2Exec',{
+                        this.$store.dispatch('SSH2ExecPath',{
                             type : command.type,
                             nodeinfo : command.params 
                         }).then(()=>{
@@ -314,16 +286,6 @@ import {DirectoryFiles} from '@/utils/util.js'
                     this.nodelist = data
                 })
             },
-            //日志下载按钮
-            logDownloadBtn(){
-                let savePath = this.$electron.remote.dialog.showSaveDialog({defaultPath:this.logTitle,filters:[{name: 'Text', extensions: ['txt']}]})
-                if(savePath.length == 0 ) return
-                this.$store.dispatch('SSH2SaveLog',savePath).then(()=>{
-                    this.$message.success('保存成功')
-                }).catch((err)=>{
-                    this.$message.error(err)
-                })
-            },
             //日志框关闭响应
             logClose(done){
                 this.logStop()
@@ -334,12 +296,6 @@ import {DirectoryFiles} from '@/utils/util.js'
             uploadlogClose(done){
                 this.uploadList = []
                 done()
-            },
-            //暂停读取日志按钮
-            logStop(){
-                this.$store.dispatch('SSH2CloseSSH')
-                this.logStopDis = true
-              
             },
             //导入原1.0版本配置文件
             importFile(){
@@ -355,13 +311,7 @@ import {DirectoryFiles} from '@/utils/util.js'
         //挂载钩子函数
         mounted() {
             this.getList()                
-            let win =this.$electron.remote.BrowserWindow.getAllWindows()[0]
-            win.on('resize', (e, cmd)=>{
-                if(this.$refs.logAreadiv){
-                    this.$refs.logAreadiv.style.height =  Math.round(win.getContentSize()[1]-160) + 'px'
-                }
-
-            })
+            
         },
     }
 
@@ -370,19 +320,5 @@ import {DirectoryFiles} from '@/utils/util.js'
 <style scoped>
 .row-bg{
     padding-top: 10px
-}
-.logArea{
-    font-size: 12px;
-    width:100%;
-    flex: 1;
-    white-space:pre-wrap;
-    background-color:rgba(8, 4, 4, 0.808);
-    color:antiquewhite;
-}
-.logAreadiv{
-    display: flex;
-    flex-direction: column;
-    height: 400px;
-    overflow:scroll;
 }
 </style>

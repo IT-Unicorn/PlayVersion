@@ -29,6 +29,10 @@ export default new Router({
       path: '/dashboard',
       name: 'dashboard',
       component: require('@/components/dashboard').default
+    },{
+      path: '/runlog',
+      name: 'runlog',
+      component: require('@/components/runlog').default
     },
     {
       path: '*',
