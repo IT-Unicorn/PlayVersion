@@ -10,7 +10,6 @@
             <el-aside width="200px" id = "aside" v-show="showAside">
                 <!-- 节点列表 -->
                 <el-table :data= "nodelist" 
-                    style="width: 100%"
                     size = "small"
                     ref="multipleTable"
                     @selection-change="handleSelectionChange"
